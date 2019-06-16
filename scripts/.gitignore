@@ -1,0 +1,4 @@
+/build
+/upload_config.properties
+/gradle.properties
+.cache.properties

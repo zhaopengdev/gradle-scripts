@@ -1,0 +1,37 @@
+//region 生成doc 暂时用不到 包括生成java和kotlin的doc
+
+////////////////////////// 如有需要将其配置在根build.gradle
+//ext.dokka_version = '0.9.17'
+//classpath "org.jetbrains.dokka:dokka-android-gradle-plugin:${dokka_version}"
+/////////////////////////
+
+
+//apply plugin: 'org.jetbrains.dokka'
+//
+//dokka {
+////    outputFormat = 'javadoc'
+//    outputFormat = 'kotlin-website'
+//    outputDirectory = "$buildDir/javadoc"
+//    noStdlibLink = true
+//}
+
+//使用dokka创建kotlin文档
+//task makeKotlinDoc(type: dokka.getClass()) {
+//    outputFormat = 'javadoc'
+//    outputDirectory = "$buildDir/javadoc"
+//}
+
+//创建java文档
+//task makeJavaDoc(type: Javadoc){
+//    source = android.sourceSets.main.java.sourceFiles
+//}
+
+//task javaDocJar(type: Jar) {
+//    dependsOn makeJavaDoc
+//    dependsOn dokka
+//    classifier = 'javadoc'
+////    from "$buildDir/javadoc"
+//    from makeJavaDoc.destinationDir
+//}
+
+//endregion

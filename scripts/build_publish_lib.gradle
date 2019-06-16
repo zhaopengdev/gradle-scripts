@@ -1,0 +1,8 @@
+
+
+apply plugin: 'tvkit.support-lib'
+
+apply from:'../scripts/maven_source.gradle'
+apply from:'../scripts/build_publish_lib_basic.gradle'
+
+

@@ -1,0 +1,1 @@
+apply from: 'https://gitlab.fengmi.tv/tv-public/gradle_project/raw/master/scripts/build_utils.gradle'

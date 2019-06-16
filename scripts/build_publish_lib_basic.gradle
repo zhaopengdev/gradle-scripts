@@ -1,0 +1,1422 @@
+import org.gradle.api.tasks.Input
+import java.nio.charset.Charset
+
+
+apply plugin: 'tvkit.support-lib'
+
+//apply from: 'https://gitlab.fengmi.tv/tv-public/gradle_project/raw/master/scripts/build_utils.gradle'
+
+
+
+//apply from: 'https://gitlab.fengmi.tv/tv-public/gradle_project/raw/master/scripts/maven_upload.gradle'
+apply from:'../scripts/build_utils.gradle'
+apply from:'../scripts/maven_upload.gradle'
+apply from: '../scripts/publish_log.gradle'
+//apply from:'https://gitlab.fengmi.tv/tv-public/gradle_project/raw/release-1.0.2/scripts/maven_upload.gradle'
+//apply from:'https://gitlab.fengmi.tv/tv-public/gradle_project/raw/release-1.0.2/scripts/publish_log.gradle'
+
+
+
+
+
+
+//获取字符串编码
+static String getEncoding(String str)
+{
+    String encode;
+    encode = "UTF-16";
+    try
+    {
+        if(str.equals(new String(str.getBytes(), encode)))
+        {
+            return encode;
+        }
+    }
+    catch(Exception ex) {}
+    encode = "ASCII";
+    try
+    {
+        if(str.equals(new String(str.getBytes(), encode)))
+        {
+            return "字符串<< " + str + " >>中仅由数字和英文字母组成，无法识别其编码格式";
+        }
+    }
+    catch(Exception ex) {}
+    encode = "ISO-8859-1";
+    try
+    {
+        if(str.equals(new String(str.getBytes(), encode)))
+        {
+            return encode;
+        }
+    }
+    catch(Exception ex) {}
+    encode = "GB2312";
+    try
+    {
+        if(str.equals(new String(str.getBytes(), encode)))
+        {
+            return encode;
+        }
+    }
+    catch(Exception ex) {}
+    encode = "UTF-8";
+    try
+    {
+        if(str.equals(new String(str.getBytes(), encode)))
+        {
+            return encode;
+        }
+    }
+    catch(Exception ex) {}
+    encode = "GBK";
+    try
+    {
+        if(str.equals(new String(str.getBytes(), encode)))
+        {
+            return encode;
+        }
+    }
+    catch(Exception ex) {}
+    /*
+
+ *......待完善
+
+ */
+    return "未识别编码格式";
+}
+
+//apply from: 'https://gitlab.fengmi.tv/tv-public/gradle_project/raw/feature-doc/scripts/doc.gradle'
+//apply from:'maven_upload.gradle'
+/** 打包流程
+ * ->文档：生成文档->复制文档->提交文档
+ * ->合并请求：创建临时分支->合并到master分支->master分支打Tag->删除临时分支
+ */
+
+/**
+ * 执行命令并返回值
+ * @param s
+ * @return
+ */
+String exe(String s){
+    return s.execute(['JAVA_TOOL_OPTIONS=-Dfile.encoding=UTF-8','LANG=UTF-8'],project.rootDir).text.trim()
+}
+
+//生成task的组名称
+if(!ext.hasProperty("taskGroup") || ext.getProperty("taskGroup") == null ){
+    project.ext.setProperty("taskGroup","tvkit lib")
+}
+
+
+
+
+//拷贝文档
+task copyDoc(type: Copy){
+    group getProperty("taskGroup")
+    from docsDir
+    into project.getProjectDir()
+    doLast {
+        println("copyDoc doLast")
+        println("docsDir is "+docsDir+" projectDir is "+getProjectDir())
+    }
+}
+
+//能生java文档
+generateDoc{
+    group getProperty("taskGroup")
+    source fileTree(file('/src/main/java'))
+    options.encoding 'UTF-8'
+    options.addStringOption('Xdoclint:none', '-quiet')
+    options.addStringOption('encoding', 'UTF-8')
+    options.addStringOption('charSet', 'UTF-8')
+}
+
+
+//提交帮助文档
+task commitDoc{
+    String message = "javadoc generated"
+    group getProperty("taskGroup")
+    doLast {
+        exec {
+            commandLine 'git','add'
+            args copyDoc.getDestinationDir().getAbsolutePath()+"/javadoc"
+        }
+        exec {
+            commandLine 'git','commit'
+            args '-m',message
+        }
+    }
+}
+
+Properties loadProperties(File file){
+    file.withInputStream {
+    }
+    FileInputStream inputStream = new FileInputStream(file)
+    java.util.Properties p = new Properties()
+    p.load(inputStream)
+    return p
+}
+
+
+class UploadConfigEntity{
+    boolean isRelease = false
+    boolean isMavenLocal = true
+
+
+    @Override
+    public String toString() {
+        return "UploadConfigEntity{" +
+                "isRelease=" + isRelease +
+                ", isMavenLocal=" + isMavenLocal +
+                '}';
+    }
+}
+
+UploadConfigEntity loadUploadConfigEntity(){
+    File file = file('./.cache.properties')
+    
+    FileInputStream inputStream = new FileInputStream(file)
+    java.util.Properties p = new Properties()
+    p.load(inputStream)
+    final UploadConfigEntity u = new UploadConfigEntity()
+    u.isRelease =  (!p.getProperty('snapshot').toBoolean())
+    u.isMavenLocal =    p.getProperty('mavenLocal').toBoolean()
+
+
+    return u
+}
+
+
+
+//发布snpashot的根目录
+def  publishRootPath = project.projectDir.path+"/publish/"
+def  publishLogSnapshotDir =  file(publishRootPath+"/snapshot")
+def  publishLogReleaseDir =  file(publishRootPath+"/release")
+def  tempMailHtml = file(publishRootPath+'/.mail_content.html')
+
+def lastestLogRelease = file(publishLogReleaseDir.path+"/log_lastest.md")
+
+def lastestLogSnapShot = file(publishLogSnapshotDir.path+"/log_lastest.md")
+
+def mNoteFile = file(publishRootPath+"/note_lastest.md")
+
+//def projectGitIgnore = file('/.gitignore')
+//
+//projectGitIgnore.with {
+//    if(!it.exists()){
+//        it.createNewFile()
+//    }
+//    if(it.text.find('/upload_config.properties') == null ){
+//        it.append('/upload_config.properties')
+//    }
+//}
+
+
+task generatePublishRootDir(){
+    //dependsOn generateMavenProperties
+    group getProperty("taskGroup")
+
+    doFirst(){
+        def publishRootDir = file(publishRootPath)
+        if(!publishRootDir.exists()){
+            publishRootDir.mkdirs()
+            System.out.println(" 创建publish目录："+publishRootDir)
+        }
+        if(!publishLogSnapshotDir.exists()){
+            publishLogSnapshotDir.mkdir()
+            System.out.println(" 创建snapshot目录："+publishLogSnapshotDir.path)
+        }
+
+        if(!publishLogReleaseDir.exists()){
+            publishLogReleaseDir.mkdir()
+            System.out.println(" 创建release目录："+publishLogReleaseDir.path)
+        }
+
+        //gitIgnore
+        File gi = file(publishRootPath+"/.gitignore")
+        gi.createNewFile()
+        tempMailHtml.path.with {
+            gi.write('/'+ it.substring(
+                    it.lastIndexOf('\\') +1
+            ))
+        }
+
+        if(!mNoteFile.exists()){
+            mNoteFile.createNewFile()
+            mNoteFile.write('#### 更新点\n' +
+                    '1. \n' +
+                    '2. \n' +
+                    '3. ')
+            System.out.println(" 创建note文件："+mNoteFile.path)
+        }
+        exe('git add .')
+    }
+}
+
+task libProjectInit{
+    group getProperty("taskGroup")
+    dependsOn generateMavenProperties,generatePublishRootDir
+
+    doLast{
+
+        System.out.println(" 任务：libProjectInit完成"+this.name)
+    }
+}
+
+
+task mailPreviewRelease{
+
+    group getProperty("taskGroup")
+    dependsOn generatePublishLogMarkdownRelease,markdownToHtml
+    doFirst{
+        project.ext.setProperty("isRelease",true)
+        tempMailHtml?.text.with {
+            System.out.println(" 邮件内容: ")
+            System.out.println("开始---")
+            System.out.println(it)
+            System.out.println("---结束")
+        }
+    }
+
+    doLast{
+        System.out.println(" 任务：mailPreview完成")
+    }
+}
+
+task mailPreviewSnapShot{
+
+    group getProperty("taskGroup")
+    dependsOn generatePublishLogMarkdownSnapshot,markdownToHtml
+    doFirst{
+        project.ext.setProperty("isRelease",false)
+        tempMailHtml?.text.with {
+            System.out.println(" 邮件内容: ")
+            System.out.println("开始---")
+            System.out.println(it)
+            System.out.println("---结束")
+        }
+    }
+
+    doLast{
+        System.out.println(" 任务：mailPreview完成")
+    }
+}
+
+
+markdownToHtml{
+    mustRunAfter generatePublishLogMarkdownSnapshot,generatePublishLogMarkdownRelease
+    boolean writeHtmlHead = true
+    doFirst{
+
+        final UploadConfigEntity u = loadUploadConfigEntity()
+
+        System.out.println("markdownToHtml UploadConfigEntity :"+u)
+        if(u.isRelease){
+            source new String(lastestLogRelease.readBytes())
+        }else{
+            source new String(lastestLogSnapShot.readBytes())
+        }
+    }
+
+    ///outputFile tempMailHtml
+
+    doLast {
+        String mailHead = '<!DOCTYPE html>\n' +
+                '<html>\n' +
+                '\t<head>\n' +
+                '\t\t<meta charset="utf-8">\n' +
+                '\t\t<title></title>\n' +
+                buildCssTag()+
+                '\t</head>\n' +
+                '\t<body class="markdown-body">'
+        String mailTail = '</body>\n' +
+                '</html>'
+
+        tempMailHtml.with {
+            if(it.exists()){
+                it.delete()
+            }
+            it.createNewFile()
+            if(writeHtmlHead){
+                it.append(mailHead)
+            }
+            it.append(outputHtml)
+            if(writeHtmlHead){
+                it.append(mailTail)
+            }
+        }
+        project.ext.setProperty("markdownToHtml",outputHtml)
+        System.out.println("任务：markdownToHtml完成 ,邮件内容预览文件地址："+tempMailHtml)
+    }
+
+}
+
+String buildCssTag(){
+    String MARKDOWN_CSS = "@font-face {\n" +
+            "  font-family: octicons-link;\n" +
+            "  src: url(data:font/woff;charset=utf-8;base64,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) format('woff');\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body {\n" +
+            "  -ms-text-size-adjust: 100%;\n" +
+            "  -webkit-text-size-adjust: 100%;\n" +
+            "  line-height: 1.5;\n" +
+            "  color: #24292e;\n" +
+            "  font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", Helvetica, Arial, sans-serif, \"Apple Color Emoji\", \"Segoe UI Emoji\", \"Segoe UI Symbol\";\n" +
+            "  font-size: 16px;\n" +
+            "  line-height: 1.5;\n" +
+            "  word-wrap: break-word;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body .pl-c {\n" +
+            "  color: #6a737d;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body .pl-c1,\n" +
+            ".markdown-body .pl-s .pl-v {\n" +
+            "  color: #005cc5;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body .pl-e,\n" +
+            ".markdown-body .pl-en {\n" +
+            "  color: #6f42c1;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body .pl-smi,\n" +
+            ".markdown-body .pl-s .pl-s1 {\n" +
+            "  color: #24292e;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body .pl-ent {\n" +
+            "  color: #22863a;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body .pl-k {\n" +
+            "  color: #d73a49;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body .pl-s,\n" +
+            ".markdown-body .pl-pds,\n" +
+            ".markdown-body .pl-s .pl-pse .pl-s1,\n" +
+            ".markdown-body .pl-sr,\n" +
+            ".markdown-body .pl-sr .pl-cce,\n" +
+            ".markdown-body .pl-sr .pl-sre,\n" +
+            ".markdown-body .pl-sr .pl-sra {\n" +
+            "  color: #032f62;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body .pl-v,\n" +
+            ".markdown-body .pl-smw {\n" +
+            "  color: #e36209;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body .pl-bu {\n" +
+            "  color: #b31d28;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body .pl-ii {\n" +
+            "  color: #fafbfc;\n" +
+            "  background-color: #b31d28;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body .pl-c2 {\n" +
+            "  color: #fafbfc;\n" +
+            "  background-color: #d73a49;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body .pl-c2::before {\n" +
+            "  content: \"^M\";\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body .pl-sr .pl-cce {\n" +
+            "  font-weight: bold;\n" +
+            "  color: #22863a;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body .pl-ml {\n" +
+            "  color: #735c0f;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body .pl-mh,\n" +
+            ".markdown-body .pl-mh .pl-en,\n" +
+            ".markdown-body .pl-ms {\n" +
+            "  font-weight: bold;\n" +
+            "  color: #005cc5;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body .pl-mi {\n" +
+            "  font-style: italic;\n" +
+            "  color: #24292e;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body .pl-mb {\n" +
+            "  font-weight: bold;\n" +
+            "  color: #24292e;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body .pl-md {\n" +
+            "  color: #b31d28;\n" +
+            "  background-color: #ffeef0;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body .pl-mi1 {\n" +
+            "  color: #22863a;\n" +
+            "  background-color: #f0fff4;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body .pl-mc {\n" +
+            "  color: #e36209;\n" +
+            "  background-color: #ffebda;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body .pl-mi2 {\n" +
+            "  color: #f6f8fa;\n" +
+            "  background-color: #005cc5;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body .pl-mdr {\n" +
+            "  font-weight: bold;\n" +
+            "  color: #6f42c1;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body .pl-ba {\n" +
+            "  color: #586069;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body .pl-sg {\n" +
+            "  color: #959da5;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body .pl-corl {\n" +
+            "  text-decoration: underline;\n" +
+            "  color: #032f62;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body .octicon {\n" +
+            "  display: inline-block;\n" +
+            "  vertical-align: text-top;\n" +
+            "  fill: currentColor;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body a {\n" +
+            "  background-color: transparent;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body a:active,\n" +
+            ".markdown-body a:hover {\n" +
+            "  outline-width: 0;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body strong {\n" +
+            "  font-weight: inherit;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body strong {\n" +
+            "  font-weight: bolder;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body h1 {\n" +
+            "  font-size: 2em;\n" +
+            "  margin: 0.67em 0;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body img {\n" +
+            "  border-style: none;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body code,\n" +
+            ".markdown-body kbd,\n" +
+            ".markdown-body pre {\n" +
+            "  font-family: monospace, monospace;\n" +
+            "  font-size: 1em;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body hr {\n" +
+            "  box-sizing: content-box;\n" +
+            "  height: 0;\n" +
+            "  overflow: visible;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body input {\n" +
+            "  font: inherit;\n" +
+            "  margin: 0;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body input {\n" +
+            "  overflow: visible;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body [type=\"checkbox\"] {\n" +
+            "  box-sizing: border-box;\n" +
+            "  padding: 0;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body * {\n" +
+            "  box-sizing: border-box;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body input {\n" +
+            "  font-family: inherit;\n" +
+            "  font-size: inherit;\n" +
+            "  line-height: inherit;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body a {\n" +
+            "  color: #0366d6;\n" +
+            "  text-decoration: none;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body a:hover {\n" +
+            "  text-decoration: underline;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body strong {\n" +
+            "  font-weight: 600;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body hr {\n" +
+            "  height: 0;\n" +
+            "  margin: 15px 0;\n" +
+            "  overflow: hidden;\n" +
+            "  background: transparent;\n" +
+            "  border: 0;\n" +
+            "  border-bottom: 1px solid #dfe2e5;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body hr::before {\n" +
+            "  display: table;\n" +
+            "  content: \"\";\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body hr::after {\n" +
+            "  display: table;\n" +
+            "  clear: both;\n" +
+            "  content: \"\";\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body table {\n" +
+            "  border-spacing: 0;\n" +
+            "  border-collapse: collapse;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body td,\n" +
+            ".markdown-body th {\n" +
+            "  padding: 0;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body h1,\n" +
+            ".markdown-body h2,\n" +
+            ".markdown-body h3,\n" +
+            ".markdown-body h4,\n" +
+            ".markdown-body h5,\n" +
+            ".markdown-body h6 {\n" +
+            "  margin-top: 0;\n" +
+            "  margin-bottom: 0;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body h1 {\n" +
+            "  font-size: 32px;\n" +
+            "  font-weight: 600;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body h2 {\n" +
+            "  font-size: 24px;\n" +
+            "  font-weight: 600;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body h3 {\n" +
+            "  font-size: 20px;\n" +
+            "  font-weight: 600;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body h4 {\n" +
+            "  font-size: 16px;\n" +
+            "  font-weight: 600;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body h5 {\n" +
+            "  font-size: 14px;\n" +
+            "  font-weight: 600;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body h6 {\n" +
+            "  font-size: 12px;\n" +
+            "  font-weight: 600;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body p {\n" +
+            "  margin-top: 0;\n" +
+            "  margin-bottom: 10px;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body blockquote {\n" +
+            "  margin: 0;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body ul,\n" +
+            ".markdown-body ol {\n" +
+            "  padding-left: 0;\n" +
+            "  margin-top: 0;\n" +
+            "  margin-bottom: 0;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body ol ol,\n" +
+            ".markdown-body ul ol {\n" +
+            "  list-style-type: lower-roman;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body ul ul ol,\n" +
+            ".markdown-body ul ol ol,\n" +
+            ".markdown-body ol ul ol,\n" +
+            ".markdown-body ol ol ol {\n" +
+            "  list-style-type: lower-alpha;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body dd {\n" +
+            "  margin-left: 0;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body code {\n" +
+            "  font-family: \"SFMono-Regular\", Consolas, \"Liberation Mono\", Menlo, Courier, monospace;\n" +
+            "  font-size: 12px;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body pre {\n" +
+            "  margin-top: 0;\n" +
+            "  margin-bottom: 0;\n" +
+            "  font-family: \"SFMono-Regular\", Consolas, \"Liberation Mono\", Menlo, Courier, monospace;\n" +
+            "  font-size: 12px;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body .octicon {\n" +
+            "  vertical-align: text-bottom;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body .pl-0 {\n" +
+            "  padding-left: 0 !important;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body .pl-1 {\n" +
+            "  padding-left: 4px !important;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body .pl-2 {\n" +
+            "  padding-left: 8px !important;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body .pl-3 {\n" +
+            "  padding-left: 16px !important;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body .pl-4 {\n" +
+            "  padding-left: 24px !important;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body .pl-5 {\n" +
+            "  padding-left: 32px !important;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body .pl-6 {\n" +
+            "  padding-left: 40px !important;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body::before {\n" +
+            "  display: table;\n" +
+            "  content: \"\";\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body::after {\n" +
+            "  display: table;\n" +
+            "  clear: both;\n" +
+            "  content: \"\";\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body>*:first-child {\n" +
+            "  margin-top: 0 !important;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body>*:last-child {\n" +
+            "  margin-bottom: 0 !important;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body a:not([href]) {\n" +
+            "  color: inherit;\n" +
+            "  text-decoration: none;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body .anchor {\n" +
+            "  float: left;\n" +
+            "  padding-right: 4px;\n" +
+            "  margin-left: -20px;\n" +
+            "  line-height: 1;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body .anchor:focus {\n" +
+            "  outline: none;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body p,\n" +
+            ".markdown-body blockquote,\n" +
+            ".markdown-body ul,\n" +
+            ".markdown-body ol,\n" +
+            ".markdown-body dl,\n" +
+            ".markdown-body table,\n" +
+            ".markdown-body pre {\n" +
+            "  margin-top: 0;\n" +
+            "  margin-bottom: 16px;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body hr {\n" +
+            "  height: 0.25em;\n" +
+            "  padding: 0;\n" +
+            "  margin: 24px 0;\n" +
+            "  background-color: #e1e4e8;\n" +
+            "  border: 0;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body blockquote {\n" +
+            "  padding: 0 1em;\n" +
+            "  color: #6a737d;\n" +
+            "  border-left: 0.25em solid #dfe2e5;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body blockquote>:first-child {\n" +
+            "  margin-top: 0;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body blockquote>:last-child {\n" +
+            "  margin-bottom: 0;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body kbd {\n" +
+            "  display: inline-block;\n" +
+            "  padding: 3px 5px;\n" +
+            "  font-size: 11px;\n" +
+            "  line-height: 10px;\n" +
+            "  color: #444d56;\n" +
+            "  vertical-align: middle;\n" +
+            "  background-color: #fafbfc;\n" +
+            "  border: solid 1px #c6cbd1;\n" +
+            "  border-bottom-color: #959da5;\n" +
+            "  border-radius: 3px;\n" +
+            "  box-shadow: inset 0 -1px 0 #959da5;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body h1,\n" +
+            ".markdown-body h2,\n" +
+            ".markdown-body h3,\n" +
+            ".markdown-body h4,\n" +
+            ".markdown-body h5,\n" +
+            ".markdown-body h6 {\n" +
+            "  margin-top: 24px;\n" +
+            "  margin-bottom: 16px;\n" +
+            "  font-weight: 600;\n" +
+            "  line-height: 1.25;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body h1 .octicon-link,\n" +
+            ".markdown-body h2 .octicon-link,\n" +
+            ".markdown-body h3 .octicon-link,\n" +
+            ".markdown-body h4 .octicon-link,\n" +
+            ".markdown-body h5 .octicon-link,\n" +
+            ".markdown-body h6 .octicon-link {\n" +
+            "  color: #1b1f23;\n" +
+            "  vertical-align: middle;\n" +
+            "  visibility: hidden;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body h1:hover .anchor,\n" +
+            ".markdown-body h2:hover .anchor,\n" +
+            ".markdown-body h3:hover .anchor,\n" +
+            ".markdown-body h4:hover .anchor,\n" +
+            ".markdown-body h5:hover .anchor,\n" +
+            ".markdown-body h6:hover .anchor {\n" +
+            "  text-decoration: none;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body h1:hover .anchor .octicon-link,\n" +
+            ".markdown-body h2:hover .anchor .octicon-link,\n" +
+            ".markdown-body h3:hover .anchor .octicon-link,\n" +
+            ".markdown-body h4:hover .anchor .octicon-link,\n" +
+            ".markdown-body h5:hover .anchor .octicon-link,\n" +
+            ".markdown-body h6:hover .anchor .octicon-link {\n" +
+            "  visibility: visible;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body h1 {\n" +
+            "  padding-bottom: 0.3em;\n" +
+            "  font-size: 2em;\n" +
+            "  border-bottom: 1px solid #eaecef;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body h2 {\n" +
+            "  padding-bottom: 0.3em;\n" +
+            "  font-size: 1.5em;\n" +
+            "  border-bottom: 1px solid #eaecef;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body h3 {\n" +
+            "  font-size: 1.25em;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body h4 {\n" +
+            "  font-size: 1em;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body h5 {\n" +
+            "  font-size: 0.875em;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body h6 {\n" +
+            "  font-size: 0.85em;\n" +
+            "  color: #6a737d;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body ul,\n" +
+            ".markdown-body ol {\n" +
+            "  padding-left: 2em;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body ul ul,\n" +
+            ".markdown-body ul ol,\n" +
+            ".markdown-body ol ol,\n" +
+            ".markdown-body ol ul {\n" +
+            "  margin-top: 0;\n" +
+            "  margin-bottom: 0;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body li {\n" +
+            "  word-wrap: break-all;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body li>p {\n" +
+            "  margin-top: 16px;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body li+li {\n" +
+            "  margin-top: 0.25em;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body dl {\n" +
+            "  padding: 0;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body dl dt {\n" +
+            "  padding: 0;\n" +
+            "  margin-top: 16px;\n" +
+            "  font-size: 1em;\n" +
+            "  font-style: italic;\n" +
+            "  font-weight: 600;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body dl dd {\n" +
+            "  padding: 0 16px;\n" +
+            "  margin-bottom: 16px;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body table {\n" +
+            "  display: block;\n" +
+            "  width: 100%;\n" +
+            "  overflow: auto;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body table th {\n" +
+            "  font-weight: 600;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body table th,\n" +
+            ".markdown-body table td {\n" +
+            "  padding: 6px 13px;\n" +
+            "  border: 1px solid #dfe2e5;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body table tr {\n" +
+            "  background-color: #fff;\n" +
+            "  border-top: 1px solid #c6cbd1;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body table tr:nth-child(2n) {\n" +
+            "  background-color: #f6f8fa;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body img {\n" +
+            "  max-width: 100%;\n" +
+            "  box-sizing: content-box;\n" +
+            "  background-color: #fff;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body img[align=right] {\n" +
+            "  padding-left: 20px;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body img[align=left] {\n" +
+            "  padding-right: 20px;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body code {\n" +
+            "  padding: 0.2em 0.4em;\n" +
+            "  margin: 0;\n" +
+            "  font-size: 85%;\n" +
+            "  background-color: rgba(27,31,35,0.05);\n" +
+            "  border-radius: 3px;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body pre {\n" +
+            "  word-wrap: normal;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body pre>code {\n" +
+            "  padding: 0;\n" +
+            "  margin: 0;\n" +
+            "  font-size: 100%;\n" +
+            "  word-break: normal;\n" +
+            "  white-space: pre;\n" +
+            "  background: transparent;\n" +
+            "  border: 0;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body .highlight {\n" +
+            "  margin-bottom: 16px;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body .highlight pre {\n" +
+            "  margin-bottom: 0;\n" +
+            "  word-break: normal;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body .highlight pre,\n" +
+            ".markdown-body pre {\n" +
+            "  padding: 16px;\n" +
+            "  overflow: auto;\n" +
+            "  font-size: 85%;\n" +
+            "  line-height: 1.45;\n" +
+            "  background-color: #f6f8fa;\n" +
+            "  border-radius: 3px;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body pre code {\n" +
+            "  display: inline;\n" +
+            "  max-width: auto;\n" +
+            "  padding: 0;\n" +
+            "  margin: 0;\n" +
+            "  overflow: visible;\n" +
+            "  line-height: inherit;\n" +
+            "  word-wrap: normal;\n" +
+            "  background-color: transparent;\n" +
+            "  border: 0;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body .full-commit .btn-outline:not(:disabled):hover {\n" +
+            "  color: #005cc5;\n" +
+            "  border-color: #005cc5;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body kbd {\n" +
+            "  display: inline-block;\n" +
+            "  padding: 3px 5px;\n" +
+            "  font: 11px \"SFMono-Regular\", Consolas, \"Liberation Mono\", Menlo, Courier, monospace;\n" +
+            "  line-height: 10px;\n" +
+            "  color: #444d56;\n" +
+            "  vertical-align: middle;\n" +
+            "  background-color: #fafbfc;\n" +
+            "  border: solid 1px #d1d5da;\n" +
+            "  border-bottom-color: #c6cbd1;\n" +
+            "  border-radius: 3px;\n" +
+            "  box-shadow: inset 0 -1px 0 #c6cbd1;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body :checked+.radio-label {\n" +
+            "  position: relative;\n" +
+            "  z-index: 1;\n" +
+            "  border-color: #0366d6;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body .task-list-item {\n" +
+            "  list-style-type: none;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body .task-list-item+.task-list-item {\n" +
+            "  margin-top: 3px;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body .task-list-item input {\n" +
+            "  margin: 0 0.2em 0.25em -1.6em;\n" +
+            "  vertical-align: middle;\n" +
+            "}\n" +
+            "\n" +
+            ".markdown-body hr {\n" +
+            "  border-bottom-color: #eee;\n" +
+            "}"
+
+
+    StringBuilder sb = new StringBuilder()
+    sb.append("<style type=\"text/css\">")
+    .append(MARKDOWN_CSS)
+    .append("</style>")
+
+    return sb.toString()
+}
+
+
+
+mailTask{
+    mustRunAfter{
+        tasks.findAll {
+            task->
+                task.name.startsWith('updateUploadConfig') || task.name.startsWith('generatePublishLog')
+        }
+    }
+    time new Date().toString()
+    mustRunAfter uploadArchives,markdownToHtml
+    to 'zhaopengdev@163.com'
+    contentType 'text/html;charset=utf-8'
+
+    doFirst {
+
+        if(!tempMailHtml.exists()){
+            throw new RuntimeException("请检查文件："+tempMailHtml.path+"是否存在," +
+                    "如不存在请调用任务：generatePublishLogMarkdow等方法生成log_lastest后，再调用任务markdownToHtml生成邮件内容！")
+        }
+
+        System.out.println("mailTask do befor!")
+        //final boolean  isRelease = getProperty("isRelease") == true
+        File gradleFile =  new File(project.projectDir,".cache.properties")
+        Properties p = loadProperties(gradleFile)
+
+        final String mavenArtifactId =  p.getProperty("mavenArtifactId")
+       // final String mavenGroupId =  p.getProperty("group")
+        final String mavenVersion =  p.getProperty("mavenVersion")
+
+        subject mavenArtifactId+":"+mavenVersion+" released"
+
+        content tempMailHtml.text
+    }
+
+    doLast {
+        System.out.println("任务：mailTask 完成！")
+    }
+}
+
+
+
+///**
+// * 发布版本
+// */
+//task publishSupportLibSnapshotNoEmail{
+//    project.ext.setProperty("isRelease",false)
+//    uploadArchives.mustRunAfter updateUploadConfigSnapshot
+//    dependsOn updateUploadConfigSnapshot,updatePublishLogSnapshot,uploadArchives ,markdownToHtml
+//
+//    group getProperty("taskGroup")
+//    doLast{
+//        println("publishSupportLib taskVersion:"+project.name)
+////        println("getPublishContent :"+getProperty("publish_content"))
+//    }
+//}
+//
+///**
+// * 发布版本
+// */
+//task publishSupportLibMavenLocalNoEmail{
+//    project.ext.setProperty("isRelease",false)
+//    uploadArchives.mustRunAfter updateUploadConfigSnapshotMavenLocal
+//    dependsOn  updateUploadConfigSnapshotMavenLocal, updatePublishLogSnapshot,uploadArchives ,markdownToHtml
+//    group getProperty("taskGroup")
+//    doLast{
+//        println("publishSupportLib taskVersion:"+project.name)
+////        println("getPublishContent :"+getProperty("publish_content"))
+//    }
+//}
+
+
+class PublishEntity{
+    String group
+    String version
+    String mavenPath
+    String name
+   // String doc
+    String gitLog
+}
+
+PublishEntity buildPublishEntity(){
+    File gradleFile =  new File(project.projectDir,".cache.properties")
+    if(!gradleFile.exists()){
+        gradleFile.createNewFile()
+        exe('git add '+gradleFile.absolutePath)
+    }
+    Properties gradleProperties = loadProperties(gradleFile)
+    println("gradleProperties :"+gradleProperties)
+//发布时间
+    final String finalGroup = gradleProperties.get("mavenGroupId")
+    final String finalName = gradleProperties.get("mavenArtifactId")
+    final String finalVersion = gradleProperties.get("mavenVersion")
+    final String finalMaven = finalGroup+":"+finalName+":"+finalVersion
+    println("final Maven :"+finalMaven)
+//发布文档
+//    String docUrlString = null
+//    if (project.hasProperty("DOC_URL")) {
+//        docUrlString = project.DOC_URL
+//    }
+//Git修改记录
+    exe('git log --date=local')
+    exe('git config  i18n.commitencoding utf-8')
+    exe('git config  i18n.logoutputencoding utf-8')
+    println("branch is "+exe('git branch'))
+//  println(exe('pwd'))
+    String commitId = exe('git rev-list --tags --max-count=1')
+    println("commitId is " + commitId)
+    String dateTime = exe('git show ' + commitId + ' --pretty=format:"%ct" --no-patch --no-notes')
+    final String gLog = exe('git log --since '+dateTime)
+
+    def pe = new PublishEntity()
+    pe.group = finalGroup
+    pe.name = finalName
+    pe.version = finalVersion
+    pe.mavenPath = finalMaven
+   // pe.doc = docUrlString
+    pe.gitLog = gLog
+    return pe
+}
+
+
+//println("publish gitLog:"+gLog)
+
+generatePublishLogMarkdownRelease{
+    dependsOn updateUploadConfigRelease
+    outputDir publishLogReleaseDir
+    noteMarkdownFile mNoteFile
+    doFirst{
+        def pe = buildPublishEntity()
+        println("generatePublishLogMarkdownRelease pe:"+pe.mavenPath)
+        mavenPath pe.mavenPath
+
+        version pe.version
+        gitLog null
+        exe('git config  i18n.commitencoding utf-8')
+        exe('git config  i18n.logoutputencoding utf-8')
+        //println("env:"+exe('env'))
+        final String commit = exe("git show --no-patch")
+        codeItemMap.put("最后提交:",commit)
+    }
+
+    doLast{
+        project.ext.setProperty("markdown",outputMarkdown)
+        System.out.println("任务：generatePublishLogMarkdownRelease完成 ，生成日志地址："+outputFile.path)
+
+    }
+}
+
+generatePublishLogMarkdownSnapshot{
+
+    dependsOn updateUploadConfigSnapshot
+    mustRunAfter updateUploadConfigSnapshot
+    outputDir publishLogSnapshotDir
+    noteMarkdownFile mNoteFile
+    doFirst{
+        println("generatePublishLogMarkdownSnapshot do first")
+        def pe = buildPublishEntity()
+        mavenPath pe.mavenPath
+
+        version pe.version
+        gitLog null
+
+        exe('git config  i18n.commitencoding utf-8')
+        exe('git config  i18n.logoutputencoding utf-8')
+       // println("env:"+exe('env'))
+        final String commit = exe("git show --no-patch")
+        codeItemMap.put("最后提交:",commit)
+    }
+
+    doLast{
+        project.ext.setProperty("markdown",outputMarkdown)
+        System.out.println("任务：generatePublishLogMarkdownSnapshot完成 ，生成日志地址："+outputFile.path)
+    }
+}
+
+
+///**
+// * 生成版本发布文档
+// */
+//generatePublishLogHtml{
+//    docUrl docUrlString
+//    mavenPath finalMaven
+//    outputDir project.projectDir
+//    version finalVersion
+//    gitLog gLog
+//}
+
+
+//task mergeToMasterAndPushTag{
+//    group getProperty("taskGroup")
+//    String tag = null
+//    doFirst{
+//        File maven_push = project.file('upload_config.properties')
+//        if(maven_push != null && maven_push.exists()) {
+//            Properties mavenProperties = new Properties()
+//            InputStream mavenPropertiesFileStream = maven_push.newDataInputStream()
+//            mavenProperties.load(mavenPropertiesFileStream)
+//            tag = "v"+mavenProperties.getProperty("mavenVersion")
+//        }
+//    }
+//
+//
+//    doLast {
+//        assert(tag != null && !tag.isEmpty()) : "没有指定发布的Tag"
+//        println("task:mergeRequest")
+//        //获取当前分支
+//        //更新代码
+//        exec {
+//            println("更新代码")
+//            commandLine 'git','fetch'
+//            args 'origin'
+//        }
+//        //创建临时分支
+//
+//        def postfix = Integer.toHexString(new Date().dateTimeString.hashCode())
+//        def tempBranchName = "temp-"+postfix
+//        exec{
+//            println("创建临时分支："+tempBranchName)
+//            commandLine 'git',"branch"
+//            args tempBranchName
+//        }
+//        try{
+//            exec{
+//                println("stash分支")
+//                commandLine 'git','stash','save'
+//                args "stash befor merge-request "+new Date().dateTimeString
+//            }
+//
+//            exec{
+//                println("切换master")
+//                commandLine 'git',"checkout"
+//                args "master"
+//            }
+//
+//            exec{
+//                println("合并分支")
+//                commandLine 'git','merge','--no-ff'
+//                args tempBranchName
+//            }
+//
+//            exec{
+//                println("打tag")
+//                commandLine 'git','tag'
+//                args tag
+//            }
+//
+//            exec{
+//                println("提交合并到master")
+//                commandLine 'git','push','--tag'
+//                args 'origin','master'
+//            }
+//
+//        }catch(Exception e){
+//            println("发生错误删除分支："+tempBranchName)
+//        }finally{
+//            exec{
+//                println("删除临时分支："+tempBranchName)
+//                commandLine 'git','branch','-d'
+//                args tempBranchName
+//            }
+//        }
+//
+//
+//    }
+//}
+
+//build publishTasks
+class PublishTask{
+    boolean isMavenLocal
+    boolean isRelease
+    boolean sendMail
+    boolean upload
+    String name;
+
+    PublishTask setMavenLocal(boolean isMavenLocal) {
+        this.isMavenLocal = isMavenLocal
+        return this
+    }
+
+    PublishTask setRelease(boolean isRelease) {
+        this.isRelease = isRelease
+        return this
+    }
+
+    PublishTask setSendMail(boolean sendMail) {
+        this.sendMail = sendMail
+        return this
+    }
+
+    PublishTask setUpload(boolean upload) {
+        this.upload = upload
+        return this
+    }
+    PublishTask setName(String name) {
+        this.name = name
+        return this
+    }
+
+}
+
+
+def releaseTask = new PublishTask().setRelease(true)
+        .setMavenLocal(false).setSendMail(true).setUpload(true)
+        .setName("publishSupportLibRelease")
+def snapShotTask = new PublishTask().setRelease(false)
+        .setMavenLocal(false).setSendMail(true)
+        .setUpload(true).setName("publishSupportLibSnapshot")
+
+def publishMavenLocal = new PublishTask().setRelease(false)
+        .setMavenLocal(true).setSendMail(false)
+        .setUpload(true).setName("publishSupportLibMavenLocal")
+
+
+def publishTasks = [
+                    releaseTask,
+                    snapShotTask,
+                    publishMavenLocal
+                    ]
+
+
+publishTasks.each {
+    uploadArchives.mustRunAfter{
+        tasks.findAll {
+            task->
+                task.name.startsWith('generatePublishLogMarkdown')
+        }
+    }
+
+    def ts = tasks.create(it.name)
+    ts.group =  getProperty("taskGroup")
+    project.ext.setProperty("isRelease",it.isRelease)
+    if(!it.isMavenLocal){
+        if(it.isRelease){
+            ts.dependsOn(tasks.findByName('generatePublishLogMarkdownRelease'))
+        }else{
+            ts.dependsOn(tasks.findByName('generatePublishLogMarkdownSnapshot'))
+        }
+    }else{
+        //mavenLocal
+        ts.dependsOn(tasks.findByName('updateUploadConfigSnapshotMavenLocal'))
+    }
+
+    if(it.upload){
+        ts.dependsOn uploadArchives
+    }
+    if(it.sendMail){
+        ts.dependsOn([tasks.findByName('markdownToHtml') , tasks.findByName('mailTask')])
+    }
+
+    ts.doLast {
+        println("任务："+it.name+"完成。")
+    }
+}
+
+
+
+
+
+
+
+
+

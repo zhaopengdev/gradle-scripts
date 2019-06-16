@@ -1,0 +1,385 @@
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.OutputDirectory
+import org.gradle.api.tasks.TaskAction
+import org.gradle.api.tasks.Optional
+import java.text.SimpleDateFormat
+
+
+//生成task的组名称
+if(!ext.hasProperty("taskGroup") || ext.getProperty("taskGroup") == null ){
+    project.ext.setProperty("taskGroup","tvkit lib")
+}
+
+ class PublishMarkdownLogGenerator   extends  DefaultTask {
+
+     public static String h1='# '
+     public static String h2='## '
+     public static String h3='### '
+     public static String h4='#### '
+     public static String li='* '
+     public static String br='\r\n'
+     public static String space=' '
+     public static String tab=' '
+     public static String code='``` \n'
+     public static String hr='--- \n'
+
+
+     public static final String CONST_LINK = "链接"
+     public static final String CONST_VERSION= "版本"
+     public static final String CONST_TIME= "时间"
+     public static final String CONST_CHANGES = "更新点"
+     public static final String CONST_REFERENCE = "参考文档"
+
+
+
+     String time
+     String version
+     String mavenPath
+     String reference
+     String gitLog
+     String changes
+     File outputDir
+     File outputFile
+     File noteMarkdownFile
+
+     boolean enableGitLog
+
+     boolean enableDoc
+
+     boolean enableWriteFile = false
+
+     String outputMarkdown
+
+     Map<String,String> itemMap
+     Map<String,String> codeItemMap
+     Map<String,String> linkItemMap
+
+     @Optional
+     Map<String, String> getExtraItemMap() {
+         if(itemMap == null){
+             itemMap = new HashMap<>()
+         }
+         return itemMap
+     }
+
+     @Optional
+     String getChanges() {
+         return changes
+     }
+
+     @Optional
+     File getNoteMarkdownFile() {
+         return noteMarkdownFile
+     }
+
+     void setNoteMarkdownFile(File changesFile) {
+         this.noteMarkdownFile = changesFile
+     }
+
+     void setChanges(String changes) {
+         this.changes = changes
+     }
+
+     @Optional
+     Map<String, String> getCodeItemMap() {
+         if(codeItemMap == null){
+             codeItemMap = new HashMap<>()
+         }
+         return codeItemMap
+     }
+
+     @Optional
+     Map<String, String> getLinkItemMap() {
+         if(linkItemMap == null){
+             linkItemMap = new HashMap<>()
+         }
+         return linkItemMap
+     }
+
+     void setLinkItemMap(Map<String, String> linkItemMap) {
+         this.linkItemMap = linkItemMap
+     }
+
+     String getOutputMarkdown() {
+         return outputMarkdown
+     }
+
+     void setOutputMarkdown(String outputMarkdown) {
+         this.outputMarkdown = outputMarkdown
+     }
+
+     @Optional
+     File getOutputFile() {
+         return outputFile
+     }
+
+     void setOutputFile(File outputFile) {
+         this.outputFile = outputFile
+     }
+
+     @Optional
+     boolean getEnableDoc(){
+        return enableDoc
+     }
+
+     @Input
+     String getTime() {
+         return time
+     }
+
+     @Optional
+     String getVersion() {
+         return version
+     }
+
+
+     @Optional
+     String getMavenPath() {
+         return mavenPath
+     }
+
+     @Optional
+     String getReference() {
+         return reference
+     }
+
+     void setReference(String reference) {
+         this.reference = reference
+     }
+
+     @Optional
+     String getGitLog() {
+         return gitLog
+     }
+
+
+     @OutputDirectory
+     File getOutputDir() {
+         return outputDir
+     }
+
+     @Override
+     String toString() {
+         return "PublishLogGenerator{" +
+                 "time='" + time + '\'' +
+                 ", version='" + version + '\'' +
+                 ", mavenPath='" + mavenPath + '\'' +
+                 ", reference='" + reference + '\'' +
+                 ", gitLog='" + gitLog == null ? "null" : "has value" + '\'' +
+                 ", changes='" + changes + '\'' +
+                 ", outputDir=" + outputDir +
+                 ", outputFile='" + outputFile + '\'' +
+                 '}'
+     }
+
+     @TaskAction
+     void generate() throws Exception {
+         System.out.println("generate this is :" + toString());
+         final String ct = time
+         time = ct != null ? ct : new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date())
+//         System.out.println("generateHtml this:" + toString())
+         final StringBuilder sb = new StringBuilder()
+         sb.append(hr).append(br)
+                 .append(buildTitleItem(CONST_VERSION+":", version)).append(br)
+                 .append(buildSimpleLiItem(CONST_TIME+":", time))
+         if(itemMap != null){
+             itemMap.each {
+                 key,value->
+                     sb.append(buildSimpleLiItem(key,value))
+             }
+         }
+
+
+
+         if( enableDoc){
+             if(reference == null){
+                 reference = "Not filled"
+                 logger.quiet("",new RuntimeException("警告，没有指定文档！请通过覆写Task:generatePublishLogMarkdownXX的reference字段来指定文档链接"))
+             }else {
+                 sb.append(buildLinkItem(CONST_REFERENCE, reference))
+             }
+         }
+         if(linkItemMap != null){
+             linkItemMap.each {
+                 key,value ->
+                             sb.append(buildLinkItem(key,value))
+             }
+         }
+
+         String changesContent = null
+         if(noteMarkdownFile != null){
+             final String markdownStr = noteMarkdownFile.text
+             if(markdownStr != null){
+                 sb.append(markdownStr+br)
+             }
+         }
+         if(changesContent == null){
+             if(changes == null){
+                 changes = "Not filled"
+             }else{
+                 changesContent = buildCodeItem(CONST_CHANGES+":", changes)
+             }
+         }
+         if(changesContent != null){
+             sb.append(changesContent)
+         }
+
+         sb.append(buildCodeItem("Maven:",mavenPath))
+
+
+         if(codeItemMap != null){
+             codeItemMap.each {
+                 key,value ->
+                     sb.append(br)
+                     .append(buildCodeItem(key,value))
+             }
+         }
+
+         if (gitLog != null && enableGitLog) {
+             sb.append(br)
+             sb.append(buildCodeItem("提交记录:\n", gitLog))
+         }
+
+         byte[] bytes = sb.toString().getBytes("UTF-8")
+         this.outputMarkdown = new String(bytes, "UTF-8")
+
+         if(outputFile != null) {
+             final File file = outputFile
+
+             writeFile(file,false,bytes)
+             RandomAccessFile randomAccessFile = new RandomAccessFile(file, "rw")
+
+             if (!file.exists()) {
+                 file.createNewFile();
+             }
+             long fileLength = randomAccessFile.length();
+             randomAccessFile.seek(fileLength);
+             randomAccessFile.writeBytes(bytes);
+             if (randomAccessFile != null) {
+                 try {
+                     randomAccessFile.close();
+                 } catch (IOException e) {
+                     e.printStackTrace();
+                 }
+             }
+         }
+         if(outputDir != null){
+
+             final File logFile = new File(outputDir.path, 'log_'+version.replace('.','_')+".md")
+             System.out.println("file is "+logFile.path)
+             if(logFile.exists()){
+                // throw new RuntimeException("相同版本的记录已经存在。如有需要，请手动删除后重试! 重名文件："+logFile.path)
+             }
+             writeFile(logFile,true,bytes)
+
+             this.outputFile = logFile
+
+             final File latest = new File(outputDir.path,'log_lastest.md')
+
+             writeFile(latest,true,bytes)
+         }
+
+     }
+
+     static writeFile(File file,boolean overrideOld,byte[] content){
+        if(file.exists()){
+            if(overrideOld){
+                file.delete()
+                file.createNewFile()
+            }
+        }else{
+            file.createNewFile()
+        }
+         RandomAccessFile randomAccessFile = new RandomAccessFile(file, "rw")
+         long fileLength = randomAccessFile.length()
+         randomAccessFile.seek(fileLength)
+         randomAccessFile.write(content)
+         if (randomAccessFile != null) {
+             try {
+                 randomAccessFile.close()
+             } catch (IOException e) {
+                 e.printStackTrace()
+             }
+         }
+     }
+
+
+     static String buildCodeItem(String head, String content) {
+         final StringBuilder sb = new StringBuilder();
+
+         sb.append(h4)
+                 .append(head).append(br)
+                 .append(code)
+                 .append(content)
+                 .append(br)
+                 .append(code)
+         ;
+         return sb.toString()
+     }
+
+     static String buildTitleItem(String head, String content) {
+         final StringBuilder sb = new StringBuilder();
+         sb.append(h4)
+                 .append(head)
+                 .append(space)
+                 .append(content)
+         return sb.toString()
+     }
+
+     static String buildTitleItemLn(String head, String content) {
+         final StringBuilder sb = new StringBuilder();
+         sb.append(h4)
+                 .append(head)
+                 .append(br)
+                 .append(content)
+         return sb.toString()
+     }
+
+     static String buildSimpleLiItem(String head, String content) {
+         final StringBuilder sb = new StringBuilder()
+         sb.append(li)
+                 .append(head)
+                 .append(space)
+                 .append(content)
+                 .append(br)
+         return sb.toString()
+     }
+
+     static String buildLinkItem(String head, String content) {
+         final StringBuilder sb = new StringBuilder()
+         sb.append(li)
+                 .append('[')
+                 .append(head)
+                 .append(']')
+                 .append('(')
+                 .append(content)
+                 .append(')')
+                 .append(br)
+         return sb.toString()
+     }
+
+}
+
+task generatePublishLogMarkdownRelease(type : PublishMarkdownLogGenerator){
+    group getProperty("taskGroup")
+    doLast{
+        println("generatePublishLogMarkdown done")
+    }
+    time new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date())
+    enableDoc true
+    enableGitLog true
+
+}
+
+task generatePublishLogMarkdownSnapshot(type : PublishMarkdownLogGenerator){
+    group getProperty("taskGroup")
+    doLast{
+        println("generatePublishLogMarkdownSnapshot done")
+    }
+    time new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date())
+    enableDoc true
+    enableGitLog false
+
+}
+
+

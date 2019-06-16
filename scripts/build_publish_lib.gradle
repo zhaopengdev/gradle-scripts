@@ -2,7 +2,18 @@
 
 apply plugin: 'tvkit.support-lib'
 
-apply from:'../scripts/maven_source.gradle'
-apply from:'../scripts/build_publish_lib_basic.gradle'
+def script_root_path
+try{
+    script_root_path= "${tvkit_gradle_scripts_path}"
+}catch(Exception e){
+    script_root_path = "https://gitlab.com/android_tvkit/gradle_scripts/raw/master/scripts/"
+    println("tvkit_gradle_scripts_path未定义，使用默认值。如有需要，请在gradle.properties中指定tvkit_gradle_scripts_path的值")
+}
+
+println("gradle_scripts_path:$script_root_path")
+
+
+apply from:script_root_path+'maven_source.gradle'
+apply from:script_root_path+'build_publish_lib_basic.gradle'
 
 

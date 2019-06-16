@@ -4,16 +4,19 @@ import java.nio.charset.Charset
 
 apply plugin: 'tvkit.support-lib'
 
-//apply from: 'https://gitlab.fengmi.tv/tv-public/gradle_project/raw/master/scripts/build_utils.gradle'
+def script_root_path
+try{
+    script_root_path= "${tvkit_gradle_scripts_path}"
+}catch(Exception e){
+    script_root_path = "https://gitlab.com/android_tvkit/gradle_scripts/raw/master/scripts/"
+    println("tvkit_gradle_scripts_path未定义，使用默认值。如有需要，请在gradle.properties中指定tvkit_gradle_scripts_path的值")
+}
 
+println("gradle_scripts_path:$script_root_path")
 
-
-//apply from: 'https://gitlab.fengmi.tv/tv-public/gradle_project/raw/master/scripts/maven_upload.gradle'
-apply from:'../scripts/build_utils.gradle'
-apply from:'../scripts/maven_upload.gradle'
-apply from: '../scripts/publish_log.gradle'
-//apply from:'https://gitlab.fengmi.tv/tv-public/gradle_project/raw/release-1.0.2/scripts/maven_upload.gradle'
-//apply from:'https://gitlab.fengmi.tv/tv-public/gradle_project/raw/release-1.0.2/scripts/publish_log.gradle'
+apply from:script_root_path+'build_utils.gradle'
+apply from:script_root_path+'maven_upload.gradle'
+apply from: script_root_path+'publish_log.gradle'
 
 
 

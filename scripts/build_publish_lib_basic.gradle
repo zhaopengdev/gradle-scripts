@@ -1071,20 +1071,20 @@ mailTask{
     }
     time new Date().toString()
 
-    try {
-        Properties localProperties = new Properties()
-        InputStream localFileStream = project.rootProject.file('local.properties').newDataInputStream()
-        localProperties.load(localFileStream)
-        userName = localProperties.getProperty("MAIL_USERNAME")
-        password = localProperties.getProperty("MAIL_PASSWORD")
-        if(userName != null && password != null && !userName.isEmpty() && !password.isEmpty()) {
-            println("已读取到local.properties配置的邮箱和密码")
-        }else{
-            println("读取邮件用户名、密码失败，无法发送邮件。如有需要，请在rootProject下的local.properties配置MAIL_USERNAME和MAIL_PASSWORD")
-        }
-    } catch (Exception e) {
-        println("读取邮件用户名、密码失败，无法发送邮件。如有需要，请在rootProject下的local.properties配置MAIL_USERNAME和MAIL_PASSWORD")
-    }
+//    try {
+//        Properties localProperties = new Properties()
+//        InputStream localFileStream = project.rootProject.file('local.properties').newDataInputStream()
+//        localProperties.load(localFileStream)
+//        userName = localProperties.getProperty("MAIL_USERNAME")
+//        password = localProperties.getProperty("MAIL_PASSWORD")
+//        if(userName != null && password != null && !userName.isEmpty() && !password.isEmpty()) {
+//            println("已读取到local.properties配置的邮箱和密码userName:"+userName+" password:"+password)
+//        }else{
+//            println("读取邮件用户名、密码失败，无法发送邮件。如有需要，请在rootProject下的local.properties配置MAIL_USERNAME和MAIL_PASSWORD")
+//        }
+//    } catch (Exception e) {
+//        println("读取邮件用户名、密码失败，无法发送邮件。如有需要，请在rootProject下的local.properties配置MAIL_USERNAME和MAIL_PASSWORD")
+//    }
 
 
     mustRunAfter uploadArchives,markdownToHtml

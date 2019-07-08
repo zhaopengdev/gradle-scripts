@@ -1079,9 +1079,11 @@ mailTask{
         password = localProperties.getProperty("MAIL_PASSWORD")
         if(userName != null && password != null && !userName.isEmpty() && !password.isEmpty()) {
             println("已读取到local.properties配置的邮箱和密码")
+        }else{
+            println("读取邮件用户名、密码失败，无法发送邮件。如有需要，请在rootProject下的local.properties配置MAIL_USERNAME和MAIL_PASSWORD")
         }
     } catch (Exception e) {
-        println("读取邮件用户名、密码错误。无法发送邮件。如有需要，请在rootProject下的local.properties配置MAIL_USERNAME和MAIL_PASSWORD")
+        println("读取邮件用户名、密码失败，无法发送邮件。如有需要，请在rootProject下的local.properties配置MAIL_USERNAME和MAIL_PASSWORD")
     }
 
 

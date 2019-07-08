@@ -26,8 +26,8 @@ buildscript {
         jcenter()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:3.4.0'
-        classpath 'huan.tvkit:plugins:1.0.0'
+        classpath 'com.android.tools.build:gradle:3.4.1'
+        classpath 'huan.tvkit:plugins:1.0.0.2-SNAPSHOT'
     }
 }
 

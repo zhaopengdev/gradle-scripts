@@ -1,4 +1,4 @@
-
+apply plugin: 'java'
 //region 配置
 
 tasks.withType(Javadoc){

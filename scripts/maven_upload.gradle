@@ -370,7 +370,7 @@ task deleteMavenProperties(type : Delete){
 //mavenVersion=1.0.2
 //releaseUrl=http\://192.168.10.9\:8081/repository/maven-releases/
 //mavenArtifactId=script
-//mavenGroupId=com.bftv.fui
+//mavenGroupId=huan.tvkit
 
 def savePropertiesFile(Properties p,File file){
 

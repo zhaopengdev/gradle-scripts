@@ -1075,8 +1075,8 @@ mailTask{
         Properties localProperties = new Properties()
         InputStream localFileStream = project.rootProject.file('local.properties').newDataInputStream()
         localProperties.load(localFileStream)
-        userName = localProperties.getProperty("MAVEN_NAME")
-        password = localProperties.getProperty("MAVEN_PASSWORD")
+        userName = localProperties.getProperty("MAIL_USERNAME")
+        password = localProperties.getProperty("MAIL_PASSWORD")
         println("已读取到local.properties配置的邮箱和密码")
     } catch (Exception e) {
         println("读取邮件用户名、密码错误。无法发送邮件。如有需要，请在rootProject下的local.properties配置MAIL_USERNAME和MAIL_PASSWORD")

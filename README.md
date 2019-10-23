@@ -214,7 +214,7 @@ mailPreview任务会自动执行generatePublishLogMarkdownXX任务后，将其�
 ```
 ### 应用场景二 : 打包APK完成、自动将其备份至服务器
 ###### 第1步：rootProject/build.gradle添加插件依赖
-此步骤与场景一相同。
+参照场景一中的第1步及第3步。
 ###### 第2步：projectDir/build.gradle中的配置
 ```java
 //依赖脚本。注意，使用类似tinker等插件、如果需要备份其产生的文件、则应该将此行代码置于tinker之后。

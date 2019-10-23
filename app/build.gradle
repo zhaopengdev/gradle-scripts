@@ -1,5 +1,5 @@
 apply plugin: 'com.android.application'
-
+apply from: '../scripts/build_publish_app.gradle'
 android {
     compileSdkVersion 28
     defaultConfig {
@@ -16,6 +16,11 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
+}
+
+tvkitAppPublish {
+    apkBackupPath "${project.projectDir}/backupApk"
+    buildDirAttachFiles "${project.rootDir}/CHANGELOG.md"
 }
 
 dependencies {

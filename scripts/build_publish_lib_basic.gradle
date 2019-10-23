@@ -1,7 +1,3 @@
-import org.gradle.api.tasks.Input
-import java.nio.charset.Charset
-
-
 apply plugin: 'tvkit.support-lib'
 
 def script_root_path
@@ -1088,7 +1084,7 @@ mailTask{
 
 
     mustRunAfter uploadArchives,markdownToHtml
-    to 'huan_dev_client@qun.mail.163.com'
+    to 'huan_ott_dev@qun.mail.163.com'
     contentType 'text/html;charset=utf-8'
 
     doFirst {

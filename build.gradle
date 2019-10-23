@@ -27,7 +27,7 @@ buildscript {
     }
     dependencies {
         classpath 'com.android.tools.build:gradle:3.4.1'
-        classpath 'huan.tvkit:plugins:1.0.0.2-SNAPSHOT'
+        classpath 'huan.tvkit:plugins:1.0.2.9-SNAPSHOT'
     }
 }
 

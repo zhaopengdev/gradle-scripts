@@ -4,7 +4,7 @@
 ### 脚本介绍
 * build_utils.gradle 编译工具类，提供一些方便的任务
 * build_publish_app.gradle 备份发布apk及日志等功能
-* build_support-lib.gradle 主要用来发布SupportLib。功能包括自动打包上传maven、发布邮件通知、记录日志等、打包时自动上传源码。
+* build_publish_lib.gradle 主要用来发布Library库(aar、jar等）。功能包括自动打包上传maven、发布邮件通知、记录日志等、打包时自动上传源码。
 * build_publish_lib_basic.gradle 与build_support-lib.gradle相同，但在上传包时，不上传源码。
 * maven_upload.gradle 管理上传lib到maven仓库的脚本。有些任务会修改upload_gradle.properties和gradle.properties
 * publish_log.gradle 在版本发布任务执行中，负责记录一些发布信息。
@@ -12,7 +12,7 @@
 ### 接入
 此工程目的是可以使用一些自定义task来加速开发工作。开发者需要根据不同需求依赖scripts下的脚本，为自己项目添加所需的task.   
 
-### 应用场景一 : 发布support、public等Library库、自动上传并使用markdown发送邮件通知团队
+### 应用场景一 : 发布support、public等Library库，自动上传并使用markdown发送邮件通知团队
 ###### 第1步：rootProject/build.gradle添加插件依赖
 ```java
 repositories {
@@ -212,7 +212,7 @@ mailPreview任务会自动执行generatePublishLogMarkdownXX任务后，将其�
   pCommitLog --> pEnd
 
 ```
-### 应用场景二 : 打包APK完成、自动将其备份至服务器
+### 应用场景二 : 打包APK完成，自动将其备份至服务器
 ###### 第1步：rootProject/build.gradle添加插件依赖
 参照场景一中的第1步.
 ###### 第2步：projectDir/build.gradle中的配置

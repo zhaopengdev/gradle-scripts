@@ -32,7 +32,7 @@ repositories {
 //发布版本所用的脚本
 apply from:'https://gitlab.com/android_tvkit/gradle_scripts/raw/master/scripts/build_publish_lib.gradle'
 //注意，这里master分支会随着代码的提交，保持脚本是最新的。如果希望使用特定版本的脚本可以单独指定：
-apply from:'https://gitlab.com/android_tvkit/gradle_scripts/raw/master/scripts/build_publish_lib.gradle'
+apply from:'https://gitlab.com/android_tvkit/gradle_scripts/raw/v1.0.5/scripts/build_publish_lib.gradle'
 //根据需求，配置一些一些task中的参数。
 //配置生成发布日志时的参数
 generatePublishLogMarkdownRelease{
@@ -214,7 +214,7 @@ mailPreview任务会自动执行generatePublishLogMarkdownXX任务后，将其�
 ```
 ### 应用场景二 : 打包APK完成、自动将其备份至服务器
 ###### 第1步：rootProject/build.gradle添加插件依赖
-参照场景一中的第1步及第3步。
+参照场景一中的第1步.
 ###### 第2步：projectDir/build.gradle中的配置
 ```java
 //依赖脚本。注意，使用类似tinker等插件、如果需要备份其产生的文件、则应该将此行代码置于tinker之后。

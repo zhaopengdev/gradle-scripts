@@ -1,6 +1,8 @@
 apply plugin: 'com.android.library'
 apply plugin: 'tvkit.support-lib'
 
+
+
 apply from: 'build_publish_lib_basic.gradle'
 
 
@@ -33,13 +35,6 @@ android {
 //}
 
 
-generatePublishLogMarkdownRelease{
-    reference 'https://gitlab.fengmi.tv/tv-public/gradle_project/blob/master/README.md'
-}
-
-generatePublishLogMarkdownSnapshot{
-    reference 'https://gitlab.fengmi.tv/tv-public/gradle_project/blob/master/README.md'
-}
 
 //updateUploadConfigSnapshot{
 //    mavenLocal true

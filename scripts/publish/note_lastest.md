@@ -1,2 +1,6 @@
 #### 更新点
-1. 修改默认接收邮件地址。添加读取本地配置邮件用户和密码的功能。
+* build_publish_lib_basic.gradle添加 Task: publishSupportLibSnapshotNoMail.在上传snapshot版本时，
+不发送邮件通知(publishSupportLibSnapshot默认发送，不配置邮箱的情况下，使用ott_dev_info)。
+
+* [README](https://gitlab.com/android_tvkit/gradle_scripts/blob/master/README.md) 
+* [CHANGELOG](https://gitlab.com/android_tvkit/gradle_scripts/blob/master/CHANGELOG.md)

@@ -1390,12 +1390,17 @@ def snapShotTaskWithoutMail = new PublishTask().setRelease(false)
         .setMavenLocal(false).setSendMail(false)
         .setUpload(true).setName("publishSupportLibSnapshotNoMail")
 
+def releaseTaskWithoutMail = new PublishTask().setRelease(true)
+        .setMavenLocal(false).setSendMail(false)
+        .setUpload(true).setName("publishSupportLibReleaseNoMail")
+
 
 def publishTasks = [
                     releaseTask,
                     snapShotTask,
                     publishMavenLocal,
-                    snapShotTaskWithoutMail
+                    snapShotTaskWithoutMail,
+                    releaseTaskWithoutMail
                     ]
 
 

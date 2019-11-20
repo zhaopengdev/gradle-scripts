@@ -11,8 +11,8 @@ ext{
             "api-template"              : 'huan.tvkit:apidemo-template:1.0.0',
             "tvkit-leanback"            : 'huan.tvkit:leanback:1.0.0.4-SNAPSHOT',
             'blueprint'                 : 'huan.tvkit:app-blueprint:0.9.8',
-            'waterfall-app'             : 'huan.tvkit:waterfall-app:1.0.5.2',
-            'waterfall'                 : 'huan.tvkit:waterfall:1.1.0.29-SNAPSHOT',
+            'waterfall-app'             : 'huan.tvkit:waterfall-app:1.0.6',
+            'waterfall'                 : 'huan.tvkit:waterfall:1.1.0.31-SNAPSHOT',
             'blueprint-domain'          : 'huan.tvkit:blueprint-domain:0.9.1.-SNAPSHOT',
 
     ]

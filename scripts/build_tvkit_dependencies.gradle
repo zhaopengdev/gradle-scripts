@@ -2,7 +2,7 @@ import java.util.logging.Logger
 
 ext{
 
-    tvkit_latest = [
+    tvkitLatest = [
 
             "baseui"                    : 'huan.tvkit:baseui:1.0.3.2',
             "glidew"                    : 'com.bftv.fui:glidew:1.0.0.1-SNAPSHOT',
@@ -17,7 +17,7 @@ ext{
 
     ]
 
-    tvkit_stable = [
+    tvkitStable = [
 
             "baseui"                    : 'huan.tvkit:baseui:1.0.3.2',
             "glidew"                    : 'com.bftv.fui:glidew:1.0.0.1-SNAPSHOT',
@@ -37,9 +37,9 @@ ext{
 task checTvkitLatest{
     group 'tvkit app'
     doLast{
-        println("tvkit最新版本:")
+        println("tvkitLatest最新版本:")
         println("--------------------------------------------------------------")
-        for( e in tvkit_latest){
+        for( e in tvkitLatest){
             println("${e.key} : ${e.value}")
         }
         println("--------------------------------------------------------------")
@@ -49,9 +49,9 @@ task checTvkitLatest{
 task checTvkitStable{
     group 'tvkit app'
     doLast{
-        println("tvkit稳定版本:")
+        println("tvkitStable稳定版本:")
         println("--------------------------------------------------------------")
-        for( e in tvkit_stable){
+        for( e in tvkitStable){
             println("${e.key} : ${e.value}")
         }
         println("--------------------------------------------------------------")

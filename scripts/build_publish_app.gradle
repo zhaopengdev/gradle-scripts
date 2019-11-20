@@ -1,3 +1,5 @@
+
+
 def script_root_path
 try{
     script_root_path= "${tvkit_gradle_scripts_path}"
@@ -9,4 +11,7 @@ try{
 println("gradle_scripts_path:$script_root_path")
 
 apply from: tvkit_gradle_scripts_path+'build_utils.gradle'
+apply from: tvkit_gradle_scripts_path+'build_tvkit_dependencies.gradle'
 apply plugin: 'tvkit.app'
+
+

@@ -1084,7 +1084,7 @@ mailTask{
 
 
     mustRunAfter uploadArchives,markdownToHtml
-    to 'huan_ott_dev@qun.mail.163.com'
+    to 'huan_ott_dev@qun.mail.163.com','hulei@huan.tv'
     contentType 'text/html;charset=utf-8'
 
     doFirst {

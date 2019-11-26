@@ -1,4 +1,3 @@
-import java.util.logging.Logger
 
 ext{
 
@@ -7,7 +6,7 @@ ext{
             "baseui"                    : 'huan.tvkit:baseui:1.0.3.2',
             "glidew"                    : 'com.bftv.fui:glidew:1.0.0.1-SNAPSHOT',
             "render"                    : 'huan.tvkit:render:1.0.3.10-SNAPSHOT',
-            "item-center"               : 'huan.tvkit:item-center:1.0.1.9-SNAPSHOT',
+            "item-center"               : 'huan.tvkit:item-center:1.0.1',
             "api-template"              : 'huan.tvkit:apidemo-template:1.0.1',
             "tvkit-leanback"            : 'huan.tvkit:leanback:1.0.0',
             'blueprint'                 : 'huan.tvkit:app-blueprint:0.9.8',

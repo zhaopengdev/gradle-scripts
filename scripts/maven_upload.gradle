@@ -39,6 +39,7 @@ class MavenPush{
     def MAVEN_NAME
     def MAVEN_PASSWORD
     def DOC_URL
+    def isDevMode
 
 
     Project project
@@ -97,6 +98,7 @@ class MavenPush{
             snapshotUrl = mavenProperties.getProperty("snapshotUrl")
             mavenLocal = cacheProperties.getProperty("mavenLocal")
             snapshot = cacheProperties.getProperty("snapshot")
+            isDevMode = cacheProperties.getProperty("devMode") == "true"
             versionExtraNumber = cacheProperties.getProperty("versionExtraNumber")
             mavenVersion = mavenProperties.getProperty("mavenVersion")
             releaseUrl = mavenProperties.getProperty("releaseUrl")
@@ -107,7 +109,6 @@ class MavenPush{
 
 //判断版本是Release or Snapshots
             isRelease = !(snapshot == "true")
-
 //获取仓库url
 
             repositoryUrl = isRelease ? releaseUrl : snapshotUrl
@@ -116,12 +117,14 @@ class MavenPush{
 
             if (!project.hasProperty("MAVEN_NAME") || !project.hasProperty("MAVEN_PASSWORD")) {
                 //读取maven账号和密码，存放在本地的local.properties里，需要指定MAVEN_NAME和MAVEN_PASSWORD
-                Properties localProperties = new Properties()
-                InputStream localFileStream = project.rootProject.file('local.properties').newDataInputStream()
-                localProperties.load(localFileStream)
-                MAVEN_NAME = localProperties.getProperty("MAVEN_NAME")
-                MAVEN_PASSWORD = localProperties.getProperty("MAVEN_PASSWORD")
+
                 if (!(mavenLocal == "true")) {
+                    Properties localProperties = new Properties()
+                    InputStream localFileStream = project.rootProject.file('local.properties').newDataInputStream()
+                    localProperties.load(localFileStream)
+                    MAVEN_NAME = localProperties.getProperty("MAVEN_NAME")
+                    MAVEN_PASSWORD = localProperties.getProperty("MAVEN_PASSWORD")
+
                     if (MAVEN_NAME == null || MAVEN_PASSWORD == null) {
                         println("没有设定maven上传所需的用户名称和密码，请在根目录的local.properties中配置MAVEN_NAME和MAVEN_PASSWORD")
                     }
@@ -150,6 +153,10 @@ class MavenPush{
                 final String result = prefix + finalNumber
                 System.out.println("buildIncrementVersion currentVersion "+ current+" nextVersion:"+result)
                 mavenVersion = result + "-SNAPSHOT"
+            }
+
+            if(isDevMode){
+                mavenVersion = "1.0-DEV"
             }
 
             //读取配置后，更新gradle.properties

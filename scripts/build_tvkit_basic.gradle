@@ -1,0 +1,18 @@
+
+ext{
+
+    localDevVersion = '1.0-DEV'
+
+    tvkitConfig = [
+            compileSdkVersion: 29,
+            buildToolsVersion: '29.0.2',
+            minSdkVersion    : 14,
+            targetSdkVersion : 25,
+    ]
+
+
+
+}
+
+
+

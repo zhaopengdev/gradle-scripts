@@ -156,7 +156,7 @@ class MavenPush{
             }
 
             if(isDevMode){
-                mavenVersion = "1.0-DEV"
+                mavenVersion = "999.9-DEV"
             }
 
             //读取配置后，更新gradle.properties

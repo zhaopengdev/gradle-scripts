@@ -388,6 +388,7 @@ class updateUploadConfig extends DefaultTask{
     boolean release = false
     boolean mavenLocal = true
     boolean updateGradleProperty = true
+    boolean devMode = false
 
     @Optional
     boolean getRelease() {
@@ -396,6 +397,10 @@ class updateUploadConfig extends DefaultTask{
 
     void setRelease(boolean release) {
         this.release = release
+    }
+
+    void setDevMode(boolean dev){
+        this.devMode = dev
     }
 
     @Optional
@@ -452,6 +457,7 @@ class updateUploadConfig extends DefaultTask{
 
         p.setProperty("snapshot",release ? "false " : "true")
         p.setProperty("mavenLocal",mavenLocal ? "true" : "false")
+        p.setProperty("devMode",devMode ? "true" : "false")
 
         int versionExtraNumber = Integer.parseInt(p.getProperty("versionExtraNumber"))
         if(versionExtraNumber > 0 && mavenLocal){
@@ -462,7 +468,7 @@ class updateUploadConfig extends DefaultTask{
             def mavenPush = new MavenPush(project)
             mavenPush.parseUploadConfig()
             p.setProperty("mavenGroupId",mavenPush.mavenGroupId)
-            p.setProperty("mavenVersion",mavenPush.mavenVersion)
+            p.setProperty("mavenVersion",devMode ? "1.0-DEVLOCAL" : mavenPush.mavenVersion)
             p.setProperty("mavenArtifactId",mavenPush.mavenArtifactId)
         }
 
@@ -504,6 +510,16 @@ task updateUploadConfigSnapshotMavenLocal(type : updateUploadConfig){
     group getProperty("taskGroup")
     release false
     mavenLocal true
+    doLast{
+        System.out.println("任务：updateUploadConfigSnapshotMavenLocal 完成!")
+    }
+}
+
+task updateUploadConfigDevModeLocal(type : updateUploadConfig){
+    group getProperty("taskGroup")
+    release false
+    mavenLocal true
+    devMode true
     doLast{
         System.out.println("任务：updateUploadConfigSnapshotMavenLocal 完成!")
     }

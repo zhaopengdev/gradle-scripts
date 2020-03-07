@@ -1,0 +1,48 @@
+
+ext{
+
+    localDevVersion = '1.0-DEVLOCAL'
+
+    tvkitLocalDev = [
+
+            "baseui"                    : 'huan.tvkit:baseui:'+localDevVersion,
+            "render"                    : 'huan.tvkit:render:'+localDevVersion,
+            "item-center"               : 'huan.tvkit:item-center:'+localDevVersion,
+            "api-template"              : 'huan.tvkit:apidemo-template:'+localDevVersion,
+            "tvkit-leanback"            : 'huan.tvkit:leanback:'+localDevVersion,
+            'blueprint'                 : 'huan.tvkit:app-blueprint:'+localDevVersion,
+            'waterfall-app'             : 'huan.tvkit:waterfall-app:'+localDevVersion,
+            'waterfall'                 : 'huan.tvkit:waterfall:'+localDevVersion,
+            'blueprint-domain'          : 'huan.tvkit:blueprint-domain:'+localDevVersion,
+
+    ]
+
+
+
+}
+
+task checTvkitLatest{
+    group 'tvkit app'
+    doLast{
+        println("tvkitLatest最新版本:")
+        println("--------------------------------------------------------------")
+        for( e in tvkitLatest){
+            println("${e.key} : ${e.value}")
+        }
+        println("--------------------------------------------------------------")
+    }
+}
+
+task checTvkitStable{
+    group 'tvkit app'
+    doLast{
+        println("tvkitStable稳定版本:")
+        println("--------------------------------------------------------------")
+        for( e in tvkitStable){
+            println("${e.key} : ${e.value}")
+        }
+        println("--------------------------------------------------------------")
+    }
+}
+
+

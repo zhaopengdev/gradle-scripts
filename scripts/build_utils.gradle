@@ -1,7 +1,7 @@
 
 apply plugin: 'tvkit.common.tools'
 
-
+def script_root_path
 try{
     script_root_path= "${tvkit_gradle_scripts_path}"
 }catch(Exception e){

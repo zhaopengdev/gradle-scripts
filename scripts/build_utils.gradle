@@ -1,6 +1,15 @@
 
 apply plugin: 'tvkit.common.tools'
 
+
+try{
+    script_root_path= "${tvkit_gradle_scripts_path}"
+}catch(Exception e){
+    script_root_path = "https://gitlab.com/android_tvkit/gradle_scripts/raw/master/scripts/"
+    println("tvkit_gradle_scripts_path未定义，使用默认值。如有需要，请在gradle.properties中指定tvkit_gradle_scripts_path的值")
+}
+apply from:script_root_path+'build_tvkit_basic.gradle'
+
 //生成task的组名称
 if(!ext.hasProperty("taskGroup") || ext.getProperty("taskGroup") == null ){
     project.ext.setProperty("taskGroup","tvkit")
